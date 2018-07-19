@@ -1,41 +1,85 @@
-diff --git a/diskmodel/convert.c b/diskmodel/convert.c
-index edf302a..ff448d3 100644
---- a/diskmodel/convert.c
-+++ b/diskmodel/convert.c
-@@ -37,13 +37,13 @@
+diff --git a/dixtrac/scsi_conv.c b/dixtrac/scsi_conv.c
+index 0614729..b1217da 100644
+--- a/dixtrac/scsi_conv.c
++++ b/dixtrac/scsi_conv.c
+@@ -23,7 +23,7 @@
+ #include "dixtrac.h"
+ #include "scsi_conv.h"
  
- // the double time is going to be msecs to minimize old disksim code
- // breakage
--INLINE dm_time_t dm_time_dtoi(double t)
-+dm_time_t dm_time_dtoi(double t)
+-__inline void
++void
+ _lto2b(u_int32_t val, u_int8_t *bytes)
  {
-   // milliseconds to picoseconds so multiply by 10^9
-   return (dm_time_t)(t * (double)(DM_TIME_MSEC));
+ 
+@@ -31,7 +31,7 @@ _lto2b(u_int32_t val, u_int8_t *bytes)
+ 	bytes[1] = val & 0xff;
  }
  
--INLINE double    dm_time_itod(dm_time_t t)
-+double    dm_time_itod(dm_time_t t)
+-__inline void
++void
+ _lto3b(u_int32_t val, u_int8_t *bytes)
  {
-   return (double)t / (double)(DM_TIME_MSEC);
- }
-@@ -54,13 +54,13 @@ INLINE double    dm_time_itod(dm_time_t t)
- // #define DM_ANGLE_DENOM ((unsigned)-1)
  
- // convert angles between doubles and fixed-point representation
--INLINE double      dm_angle_itod(dm_angle_t a)
-+double      dm_angle_itod(dm_angle_t a)
- {
-   //  return (double)a / (double)(unsigned)-1;
-   return (double)a / (double)((long long)1 << 32);
+@@ -40,7 +40,7 @@ _lto3b(u_int32_t val, u_int8_t *bytes)
+ 	bytes[2] = val & 0xff;
  }
  
--INLINE dm_angle_t  dm_angle_dtoi(double a)
-+dm_angle_t  dm_angle_dtoi(double a)
+-__inline void
++void
+ _lto4b(u_int32_t val, u_int8_t *bytes)
  {
-   if(a > 1.0) 
-     a -= (int)a;
+ 
+@@ -50,7 +50,7 @@ _lto4b(u_int32_t val, u_int8_t *bytes)
+ 	bytes[3] = val & 0xff;
+ }
+ 
+-__inline u_int32_t
++u_int32_t
+ _2btol(u_int8_t *bytes)
+ {
+ 	register u_int32_t rv;
+@@ -60,7 +60,7 @@ _2btol(u_int8_t *bytes)
+ 	return (rv);
+ }
+ 
+-__inline u_int32_t
++u_int32_t
+ _3btol(u_int8_t *bytes)
+ {
+ 	register u_int32_t rv;
+@@ -71,7 +71,7 @@ _3btol(u_int8_t *bytes)
+ 	return (rv);
+ }
+ 
+-__inline u_int32_t
++u_int32_t
+ _4btol(u_int8_t *bytes)
+ {
+ 	register u_int32_t rv;
+diff --git a/dixtrac/scsi_conv.h b/dixtrac/scsi_conv.h
+index 6ffa455..c48b080 100644
+--- a/dixtrac/scsi_conv.h
++++ b/dixtrac/scsi_conv.h
+@@ -25,11 +25,11 @@
+ 
+ #include <sys/types.h> 
+ 
+-__inline void _lto2b __P((u_int32_t val, u_int8_t *bytes));
+-__inline void _lto3b __P((u_int32_t val, u_int8_t *bytes));
+-__inline void _lto4b __P((u_int32_t val, u_int8_t *bytes));
+-__inline u_int32_t _2btol __P((u_int8_t *bytes));
+-__inline u_int32_t _3btol __P((u_int8_t *bytes));
+-__inline u_int32_t _4btol __P((u_int8_t *bytes));
++void _lto2b __P((u_int32_t val, u_int8_t *bytes));
++void _lto3b __P((u_int32_t val, u_int8_t *bytes));
++void _lto4b __P((u_int32_t val, u_int8_t *bytes));
++u_int32_t _2btol __P((u_int8_t *bytes));
++u_int32_t _3btol __P((u_int8_t *bytes));
++u_int32_t _4btol __P((u_int8_t *bytes));
+ 
+ #endif /* SCSI_CONV_H */
 diff --git a/src/disksim.c b/src/disksim.c
-index ccc566d..4972977 100644
+index ccc566d..ad74d53 100644
 --- a/src/disksim.c
 +++ b/src/disksim.c
 @@ -173,7 +173,7 @@ int addtoextraq_check(event *ev)
@@ -83,15 +127,6 @@ index ccc566d..4972977 100644
  {
     event *tmp;
  
-@@ -622,7 +622,7 @@ event *io_done_notify (ioreq_event *curr)
- }
- 
- 
--INLINE static event * 
-+static event * 
- getnextevent(void)
- {
-    event *curr = getfromintq();
 diff --git a/src/disksim_controller.c b/src/disksim_controller.c
 index 9a7d2b4..824c206 100644
 --- a/src/disksim_controller.c
@@ -118,162 +153,6 @@ index 1f301db..1f15433 100644
  controller *getctlrbyname(char *name, int *num);
  
  int load_ctlr_topo(struct lp_topospec *t, int *inbus);
-diff --git a/src/disksim_device.c b/src/disksim_device.c
-index ed24d21..b40b351 100644
---- a/src/disksim_device.c
-+++ b/src/disksim_device.c
-@@ -289,49 +289,49 @@ void device_cleanstats (void)
- }
- 
- 
--INLINE int device_set_depth (int devno, int inbusno, int depth, int slotno)
-+int device_set_depth (int devno, int inbusno, int depth, int slotno)
- {
-    ASSERT1 ((devno >= 0) && (devno < numdevices), "devno", devno);
-    return disksim->deviceinfo->devices[devno]->set_depth(devicenos[devno], inbusno, depth, slotno);
- }
- 
- 
--INLINE int device_get_depth (int devno)
-+int device_get_depth (int devno)
- {
-    ASSERT1 ((devno >= 0) && (devno < numdevices), "devno", devno);
-    return disksim->deviceinfo->devices[devno]->get_depth(devno);
- }
- 
- 
--INLINE int device_get_inbus (int devno)
-+int device_get_inbus (int devno)
- {
-    ASSERT1 ((devno >= 0) && (devno < numdevices), "devno", devno);
-    return disksim->deviceinfo->devices[devno]->get_inbus(devno);
- }
- 
- 
--INLINE int device_get_busno (ioreq_event *curr)
-+int device_get_busno (ioreq_event *curr)
- {
-    ASSERT1 ((curr->devno >= 0) && (curr->devno < numdevices), "curr->devno", curr->devno);
-    return disksim->deviceinfo->devices[curr->devno]->get_busno(curr);
- }
- 
- 
--INLINE int device_get_slotno (int devno)
-+int device_get_slotno (int devno)
- {
-    ASSERT1 ((devno >= 0) && (devno < numdevices), "devno", devno);
-    return disksim->deviceinfo->devices[devno]->get_slotno(devno);
- }
- 
- 
--INLINE int device_get_number_of_blocks (int devno)
-+int device_get_number_of_blocks (int devno)
- {
-    ASSERT1 ((devno >= 0) && (devno < numdevices), "devno", devno);
-    return disksim->deviceinfo->devices[devno]->get_number_of_blocks(devno);
- }
- 
- 
--INLINE int device_get_maxoutstanding (int devno)
-+int device_get_maxoutstanding (int devno)
- {
-    ASSERT1 ((devno >= 0) && (devno < numdevices), "devno", devno);
-    return disksim->deviceinfo->devices[devno]->get_maxoutstanding(devno);
-@@ -344,28 +344,28 @@ int device_get_numdevices (void)
- }
- 
- 
--INLINE int device_get_numcyls (int devno)
-+int device_get_numcyls (int devno)
- {
-    ASSERT1 ((devno >= 0) && (devno < numdevices), "devno", devno);
-    return disksim->deviceinfo->devices[devno]->get_numcyls(devno);
- }
- 
- 
--INLINE double device_get_blktranstime (ioreq_event *curr)
-+double device_get_blktranstime (ioreq_event *curr)
- {
-    ASSERT1 ((curr->devno >= 0) && (curr->devno < numdevices), "curr->devno", curr->devno);
-    return disksim->deviceinfo->devices[curr->devno]->get_blktranstime(curr);
- }
- 
- 
--INLINE int device_get_avg_sectpercyl (int devno)
-+int device_get_avg_sectpercyl (int devno)
- {
-    ASSERT1 ((devno >= 0) && (devno < numdevices), "devno", devno);
-    return disksim->deviceinfo->devices[devno]->get_avg_sectpercyl(devno);
- }
- 
- 
--INLINE void device_get_mapping (int maptype, 
-+void device_get_mapping (int maptype, 
- 				int devno, 
- 				int blkno, 
- 				int *cylptr, 
-@@ -382,14 +382,14 @@ INLINE void device_get_mapping (int maptype,
- }
- 
- 
--INLINE void device_event_arrive (ioreq_event *curr)
-+void device_event_arrive (ioreq_event *curr)
- {
-    ASSERT1 ((curr->devno >= 0) && (curr->devno < numdevices), "curr->devno", curr->devno);
-    return disksim->deviceinfo->devices[curr->devno]->event_arrive(curr);
- }
- 
- 
--INLINE int device_get_distance (int devno, 
-+int device_get_distance (int devno, 
- 				ioreq_event *req, 
- 				int exact, 
- 				int direction)
-@@ -402,7 +402,7 @@ INLINE int device_get_distance (int devno,
- }
- 
- 
--INLINE double device_get_servtime (int devno, 
-+double device_get_servtime (int devno, 
- 				   ioreq_event *req, 
- 				   int checkcache, 
- 				   double maxtime)
-@@ -428,7 +428,7 @@ double device_get_seektime (int devno,
- }
- 
- 
--INLINE double device_get_acctime (int devno, 
-+double device_get_acctime (int devno, 
- 				  ioreq_event *req, 
- 				  double maxtime)
- {
-@@ -440,7 +440,7 @@ INLINE double device_get_acctime (int devno,
- }
- 
- 
--INLINE void device_bus_delay_complete (int devno, 
-+void device_bus_delay_complete (int devno, 
- 				       ioreq_event *curr, 
- 				       int sentbusno)
- {
-@@ -451,7 +451,7 @@ INLINE void device_bus_delay_complete (int devno,
- }
- 
- 
--INLINE void device_bus_ownership_grant (int devno, 
-+void device_bus_ownership_grant (int devno, 
- 					ioreq_event *curr, 
- 					int busno, 
- 					double arbdelay)
-@@ -499,7 +499,7 @@ int disksim_syncset_loadparams(struct lp_block *b)
- }
- 
- 
--INLINE int dev_map_devno(int n)
-+int dev_map_devno(int n)
- { 
-   assert((n < numdevices) && (n >=0));
-   return devicenos[n];
 diff --git a/src/disksim_disk.c b/src/disksim_disk.c
 index 9387b9d..f4924bc 100644
 --- a/src/disksim_disk.c
